@@ -1,0 +1,61 @@
+:root {
+    --trans-color-1: rgb(32, 32, 32);
+    --trans-color-2: rgb(48, 48, 48);
+    --trans-gradient: repeating-linear-gradient(
+        45deg,
+        var(--trans-color-1),
+        var(--trans-color-1) 4px,
+        var(--trans-color-2) 4px,
+        var(--trans-color-2) 8px
+    );
+
+    background: black;
+    color: white;
+    font-family: sans-serif;
+}
+body { 
+    display: flex; flex-direction: row;
+    align-items: center; justify-content: center;
+    width: 100vw; height: 100vh;
+    gap: 8px; padding: 8px; margin: 0;
+}
+h2 {
+    font-size: large;
+    margin: 0;
+}
+#scene-container {
+    width: 512px; height: 512px;
+}
+#scene-container > canvas {
+    background: var(--trans-gradient);
+}
+#tools-container {
+    width: 320px;
+    display: flex; flex-direction: column;
+    gap: 8px;
+}
+#brushes-row, #brushes-container, #buttons-row {
+    display: flex; flex-direction: row; gap: 8px;
+    flex-wrap: wrap; justify-content: space-evenly;
+}
+.tool-toggle {
+    width: 64px; height: 64px;
+    object-fit: contain;
+}
+.tool-toggle.active {
+    outline: 2px solid white;
+}
+textarea {
+    font-size: 16px;
+    border: 1px solid white;
+    border-radius: 8px;
+    background: black; color: white;
+}
+#brush-editor, #palette-editor {
+    width: 100%; height: 192px;
+    font-size: 16px;
+}
+
+textarea.error {
+    background: darkred;
+}

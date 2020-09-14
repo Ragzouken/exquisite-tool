@@ -2,14 +2,44 @@ doctype html
 html
     head
         title exquisite tool b
+        meta(charset="utf-8")
         // third party libraries
         script
-            include lib/FileSaver.min.js
+            include scripts/FileSaver.min.js
+        script
+            include scripts/blitsy.js
+        script
+            include scripts/utility.js
         // styles
         style#base-style
-            include base-style.css
+            include styles/base-style.css
+        style#editor-style
+            include styles/editor-style.css
+    body(onload="start()")
+        #tools-container
+            #brushes-row
+                #brushes-container
+            h2 brush editor
+            textarea#brush-editor
+            h2 palette editor
+            textarea#palette-editor
+            #buttons-row
+                button(title="download a copy of the image" onclick="exportImage()") export image
+                button(title="download a copy of the editor and brushes" onclick="exportEditor()") export editor
+                button(title="create a new brush from the active brush" onclick="duplicateBrush()") duplicate brush
+                button(title="clear image" onclick="clearImage()") clear image
+        #scene-container
+        #data(hidden)
+            script#exquisite-tool-b-data(type="application/json").
+                {
+                    "palette": "X #bc658d\nO #82c4c3\n+ #f9d89c\n@ #f5a7a7",
+                    "brushes": {
+                        "1": "X_X_X_X_\n_X_X_X_X\nX_X_X_X_\n_OOOOX_X\nXOOOO_X_\n_X_X_X_X\nX_X_X_X_\n_X_X_X_X", 
+                        "2": "++++\nXOOX\nXOOX\n@@@@", 
+                        "3": "X_@_+_O_+_@_X"
+                    },
+                    "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACABAMAAAAxEHz4AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURQAAAH1aVaIbUmkAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAH9SURBVGje7VnRsqswCAx/AP//sxdQqE0PXrM89JyZ4FDbSViBrKbCaIuQSEeHfnJHBzWP3wBAQh3VJPZkDGaiYzl5RUdYahys1ovmun4sZqkHMbkviwBuorZDnSEBSeym5IkAEcRyYW6AoiE4Dg5w+E54CHycYQ9kOsMAjALwBLQs7RCoCyAT0LJ834PNg82DK8DmwebB9QwDbB5sHphsHmwemGwe/GkehCG+jIclfc+DtrRDaMv3c+DSy4C9PEsnAjkTIYypl0BsMe01HFFjgtdTzA1IFcCBrISAqNWRvBqFhuBVnOM7Iepu8BAvCCFqBcVjRdAyGA27OFs6GFH3QF0QvKJptSgPACyoGgnNCaumIUqRQZSKwvOW8rgOer0h6VWMY83tE32z9dpwOvAMIgGiroyGkGXhDOHhUQLoA4af6DsAXeqJ/BAiL3jWldEQ0pawJFIsncTCLPLAfr17sMaDMxfElySuhcBpmyEsJjFWjjEeqGHYEsiDyPzLfi0ETtvNg82DG8nB2zeS674wD/0P4GNfmIRjG60mfO4L87hv/Vy6+PFYnwFeE5sA9x5Q2WeiiKGcMO8LsweRgnrC2W8coGS/sewpx5WK8Uu/8ed/YTG3Gs9+Y3XbRxKq8ew33j836udM9htRgOw3Vj3l5EExnv3GUoIH5fgY/wB2sF/q/TwI0gAAAABJRU5ErkJggg=="
+                }
         // scripts
         script
-            include main-script.js
-    body(onload="loaded()")
-        p hello
+            include scripts/main.js
