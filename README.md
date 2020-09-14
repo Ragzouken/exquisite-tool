@@ -1,6 +1,6 @@
-# domino
+# exquisite tool b
 
-tools for developing the tool "domino"
+tools for developing the tool "exquisite tool b"
 
 ## how to get started
 
@@ -18,13 +18,13 @@ npm install -g jstransformer-markdown-it
 ```
 
 ### developer scripts
-run a local server that loads the standalone domino page and refreshes it 
+run a local server that loads the standalone page and refreshes it 
 whenever you make changes:
 ```
-./serve.cmd
+./watch.cmd
 ```
 
-build the standalone domino page to `dist/index.html`:
+build the standalone page to `dist/exquisite-tool-b.html`:
 ```
 ./build.cmd
 ```
