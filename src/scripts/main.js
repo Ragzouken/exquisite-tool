@@ -172,9 +172,10 @@ async function exportImage() {
 }
 
 function exportEditor() {
-    const image = document.getElementById("image");
+    const dataElement = document.getElementById("exquisite-tool-b-data");
     const drawing = /** @type {HTMLCanvasElement} */ (document.getElementById("drawing"));
-    image.src = drawing.toDataURL('image/png');
+    project.image = drawing.toDataURL('image/png');
+    dataElement.innerHTML = JSON.stringify(project);
 
     const clone = /** @type {HTMLElement} */ (document.documentElement.cloneNode(true));
     const blob = new Blob([clone.outerHTML], {type: "text/html"});
