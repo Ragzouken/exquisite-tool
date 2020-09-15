@@ -60,3 +60,37 @@ function addPressListener(element, callback) {
     });
     document.addEventListener('pointerup', (event) => held = false);
 }
+
+// from https://github.com/ai/nanoid/blob/master/non-secure/index.js
+const urlAlphabet = 'ModuleSymbhasOwnPr-0123456789ABCDEFGHNRVfgctiUvz_KqYTJkLxpZXIjQW';
+function nanoid(size = 21) {
+    let id = ''
+    // A compact alternative for `for (var i = 0; i < step; i++)`.
+    let i = size
+    while (i--) {
+    // `| 0` is more compact and faster than `Math.floor()`.
+    id += urlAlphabet[(Math.random() * 64) | 0]
+    }
+    return id
+}
+
+/**
+ * @param {File} file 
+ */
+async function textFromFile(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = reject;
+        reader.onload = () => resolve(reader.result);
+        reader.readAsText(file); 
+    });
+}
+
+/**
+ * @param {string} source
+ */
+async function htmlFromText(source) {
+    const template = document.createElement('template');
+    template.innerHTML = source;
+    return template.content;
+}
