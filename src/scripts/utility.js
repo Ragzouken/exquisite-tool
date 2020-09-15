@@ -45,7 +45,7 @@ function html(tagName, attributes = {}, ...children) {
  * @param {HTMLElement} element 
  * @param {(x: number, y: number) => void} callback
  */
-function listenPressPositions(element, callback) {
+function addPressListener(element, callback) {
     let held = false;
     element.addEventListener('pointerdown', (event) => {
         killEvent(event);

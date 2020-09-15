@@ -45,7 +45,7 @@ class ColorWheel {
 
         this.refresh();
 
-        listenPressPositions(this.hsWheelRenderering.canvas, (x, y) => {
+        addPressListener(this.hsWheelRenderering.canvas, (x, y) => {
             const wc = this.wheelCenter;
             const dx = x - wc;
             const dy = y - wc;
@@ -58,7 +58,7 @@ class ColorWheel {
             this.refresh();
         });
 
-        listenPressPositions(this.vBarRendering.canvas, (x, y) => {
+        addPressListener(this.vBarRendering.canvas, (x, y) => {
             this.color.v = Math.max(Math.min(x / this.options.wheelSize, 1), 0);
             this.refresh();
         });
@@ -67,6 +67,9 @@ class ColorWheel {
     refresh() {
         resizeRendering2D(this.hsWheelRenderering, this.options.wheelSize, this.options.wheelSize);
         resizeRendering2D(this.vBarRendering, this.options.wheelSize, this.sliderHeight);
+
+        clearRendering2D(this.hsWheelRenderering);
+        clearRendering2D(this.vBarRendering);
 
         const wc = this.wheelCenter;
         const wr = this.wheelRadius;
@@ -119,7 +122,6 @@ class ColorWheel {
             const cursorX = this.options.wheelSize * this.color.v;
             const cursorY = this.sliderHeight * .5;
 
-            //clearRendering2D(this.vBarRendering);
             this.vBarRendering.beginPath();
             this.vBarRendering.arc(cursorX, cursorY, this.options.wheelCursorRadius, 0, Math.PI * 2, false);
             this.vBarRendering.fillStyle = cssColor;
