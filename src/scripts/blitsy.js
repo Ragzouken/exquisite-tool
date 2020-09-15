@@ -36,6 +36,17 @@ function copyRendering2D(rendering) {
 }
 
 /**
+
+ * @param {CanvasRenderingContext2D} rendering 
+ * @param {number} width 
+ * @param {number} height 
+ */
+function resizeRendering2D(rendering, width, height) {
+    rendering.canvas.width = width;
+    rendering.canvas.height = height;
+}
+
+/**
  * @callback pixelsAction
  * @param {Uint32Array} pixels
  */

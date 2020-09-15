@@ -32,6 +32,9 @@ function start() {
     paletteEditor.value = project.palette;
     
     updatePaletteFromEditor();
+
+    const wheel = new ColorWheel({});
+    document.body.appendChild(wheel.root);
 }
 
 function parsePalette(text) {
