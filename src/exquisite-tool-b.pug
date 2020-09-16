@@ -25,13 +25,14 @@ html
             textarea#brush-editor
             h2 palette editor
             textarea#palette-editor
-            #buttons-row
+            .buttons-row
                 button(title="download a copy of the image" onclick="exportImage()") export image
-                button(title="download a copy of the editor and brushes" onclick="exportEditor()") export editor
                 button(title="create a new brush from the active brush" onclick="duplicateBrush()") duplicate brush
                 button(title="delete active brush" onclick="deleteBrush()") delete brush
                 button(title="clear image" onclick="clearImage()") clear image
-                button#import-button(title="import brushes") import brushes
+            .buttons-row
+                button(title="download a copy of the editor and brushes" onclick="exportEditor()") export
+                button#import-button(title="import colors and brushes from another export") import
         #scene-container
         #data(hidden)
             script#exquisite-tool-b-data(type="application/json")

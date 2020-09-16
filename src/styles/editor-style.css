@@ -33,10 +33,14 @@ h2 {
     width: 320px;
     display: flex; flex-direction: column;
     gap: 8px;
+    max-height: 100vh;
 }
-#brushes-row, #brushes-container, #buttons-row {
+#brushes-row, #brushes-container, .buttons-row {
     display: flex; flex-direction: row; gap: 8px;
     flex-wrap: wrap; justify-content: space-evenly;
+}
+.buttons-row > button {
+    flex: 1;
 }
 .tool-toggle {
     width: 64px; height: 64px;
