@@ -43,8 +43,10 @@ function copyRendering2D(rendering) {
  * @param {number} height 
  */
 function resizeRendering2D(rendering, width, height) {
+    const copy = copyRendering2D(rendering);
     rendering.canvas.width = width;
     rendering.canvas.height = height;
+    rendering.drawImage(copy.canvas, 0, 0);
 }
 
 /**

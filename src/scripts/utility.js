@@ -16,7 +16,8 @@ function killEvent(event) {
 }
 
 /**
- * @param {string} src 
+ * @param {string} src
+ * @returns {Promise<HTMLImageElement>} image
  */
 async function loadImage(src) {
     return new Promise((resolve, reject) => {
@@ -27,16 +28,26 @@ async function loadImage(src) {
 }
 
 /**
+ * 
+ * @param {HTMLImageElement} image 
+ */
+function imageToRendering2D(image) {
+    const rendering = createRendering2D(image.naturalWidth, image.naturalHeight);
+    rendering.drawImage(image, 0, 0);
+    return rendering;
+}
+
+/**
  * @template {keyof HTMLElementTagNameMap} K
  * @param {K} tagName 
  * @param {*} attributes 
- * @param  {...HTMLElement} children 
+ * @param  {...(Node | string)} children 
  * @returns {HTMLElementTagNameMap[K]}
  */
 function html(tagName, attributes = {}, ...children) {
     const element = /** @type {HTMLElementTagNameMap[K]} */ (document.createElement(tagName)); 
     Object.entries(attributes).forEach(([name, value]) => element.setAttribute(name, value));
-    children.forEach((child) => element.appendChild(child));
+    children.forEach((child) => element.append(child));
     return element;
 }
 

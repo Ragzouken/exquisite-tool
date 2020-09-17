@@ -35,13 +35,23 @@ h2 {
     gap: 8px;
     max-height: 100vh;
 }
-#brushes-row, #brushes-container, .buttons-row {
+#brushes-row, #brushes-container {
     display: flex; flex-direction: row; gap: 8px;
     flex-wrap: wrap; justify-content: space-evenly;
+}
+
+.buttons-row {
+    display: flex; flex-direction: row; gap: 8px;
+    flex-wrap: wrap; justify-content: stretch;
 }
 .buttons-row > button {
     flex: 1;
 }
+
+input, select {
+    flex: 1;
+}
+
 .tool-toggle {
     width: 64px; height: 64px;
     object-fit: contain;
@@ -62,4 +72,12 @@ textarea {
 
 textarea.error {
     background: darkred;
+}
+
+.settings-section {
+    border: solid 1px white;
+    margin: 8px; padding: 8px;
+
+    display: flex; flex-direction: column;
+    gap: 8px;
 }

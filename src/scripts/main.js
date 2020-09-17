@@ -3,18 +3,18 @@ let palette = { default: 0 };
 /** @type {string} */
 let activeBrushId;
 
-function start() {
+async function start() {
     const dataElement = document.getElementById("exquisite-tool-b-data");
     project = JSON.parse(dataElement.innerHTML);
 
     const sceneContainer = document.getElementById("scene-container");
     sceneContainer.innerHTML = "";
 
-    sceneContainer.append(rendering.canvas);
-    rendering.canvas.setAttribute("style", "width: 512px; height: 512px;");
-    rendering.canvas.id = "drawing";
-    makeDrawable(rendering);
-    fillRendering2D(rendering);
+    //sceneContainer.append(rendering.canvas);
+    //rendering.canvas.setAttribute("style", "width: 512px; height: 512px;");
+    //rendering.canvas.id = "drawing";
+    //makeDrawable(rendering);
+    //fillRendering2D(rendering);
     loadImage(project.image).then((image) => rendering.drawImage(image, 0, 0));
 
     const brushEditor = /** @type {HTMLTextAreaElement} */ (document.getElementById("brush-editor"));
@@ -66,6 +66,118 @@ function start() {
         paletteEditor.value = project.palette;
         updatePaletteFromEditor();
     });
+
+    const panel = getDrawingSettingsPanel();
+    panel.drawingSelect.addEventListener("input", () => {
+        setActiveDrawing(project.drawings[parseInt(panel.drawingSelect.value, 10)]);
+    });
+    panel.nameInput.addEventListener("input", () => {
+        activeDrawing.name = panel.nameInput.value;
+    });
+    panel.resizeButton.addEventListener("click", () => {
+        resizeRendering2D(
+            drawingToRendering2d.get(activeDrawing),
+            parseInt(panel.widthInput.value, 10),
+            parseInt(panel.heightInput.value, 10),
+        );
+        setActiveDrawing(activeDrawing);
+    });
+    panel.cloneButton.addEventListener("click", () => {
+        const clone = {...activeDrawing};
+        clone.name += " copy";
+        const rendering = copyRendering2D(getActiveRendering());
+        makeDrawable(rendering);
+        drawingToRendering2d.set(clone, rendering);
+        project.drawings.push(clone);
+        setActiveDrawing(clone);
+        refreshDrawingSelect();
+    });
+    panel.clearButton.addEventListener("click", () => {
+        fillRendering2D(getActiveRendering());
+    });
+    panel.deleteButton.addEventListener("click", () => {
+        if (project.drawings.length === 0) return;
+
+        const index = project.drawings.indexOf(activeDrawing);
+        project.drawings.splice(index, 1);
+
+        drawingToRendering2d.delete(activeDrawing);
+        const first = Array.from(drawingToRendering2d.keys())[0];
+        setActiveDrawing(first);
+        refreshDrawingSelect();
+    });
+
+    await reloadAllDrawings();
+    refreshDrawingSelect();
+}
+
+const drawingToRendering2d = new Map();
+
+async function reloadAllDrawings() {
+    drawingToRendering2d.clear();
+
+    async function reload(drawing) {
+        const image = await loadImage(drawing.image);
+        const rendering = imageToRendering2D(image);
+
+        makeDrawable(rendering);
+        drawingToRendering2d.set(drawing, rendering);
+    };
+
+    await Promise.all(project.drawings.map(reload));
+
+    const first = Array.from(drawingToRendering2d.keys())[0];
+    setActiveDrawing(first);
+}
+
+function refreshDrawingSelect() {
+    const panel = getDrawingSettingsPanel();
+    
+    while (panel.drawingSelect.children.length) 
+        panel.drawingSelect.removeChild(panel.drawingSelect.children[0]);
+
+    const options = project.drawings.map((drawing, i) => html("option", { value: i }, drawing.name));
+    options.forEach((option) => panel.drawingSelect.appendChild(option));
+    panel.drawingSelect.value = project.drawings.indexOf(activeDrawing);
+}
+
+function getDrawingSettingsPanel() {
+    const drawingSelect = document.getElementById("drawing-select");
+    const nameInput = document.getElementById("drawing-name");
+
+    const widthInput = document.getElementById("resize-width");
+    const heightInput = document.getElementById("resize-height");
+    const resizeButton = document.getElementById("resize-submit");
+
+    const cloneButton = document.getElementById("clone-button");
+    const clearButton = document.getElementById("clear-button");
+    const deleteButton = document.getElementById("delete-button");
+
+    return { 
+        drawingSelect, nameInput,
+        widthInput, heightInput, resizeButton,
+        cloneButton, clearButton, deleteButton,
+    }
+}
+
+let activeDrawing;
+function getActiveRendering() { return drawingToRendering2d.get(activeDrawing); }
+
+function setActiveDrawing(drawing) {
+    activeDrawing = drawing;
+    const container = document.getElementById("scene-container");
+    while (container.children.length) container.removeChild(container.children[0]);
+    const rendering = drawingToRendering2d.get(drawing);
+    container.appendChild(rendering.canvas);
+
+    const [w, h] = [rendering.canvas.width * 4, rendering.canvas.height * 4];
+    rendering.canvas.setAttribute("id", "drawing");
+    rendering.canvas.setAttribute("style", `width: ${w}px; height: ${h}px;`);
+
+    const widthInput = document.getElementById("resize-width");
+    const heightInput = document.getElementById("resize-height");
+    widthInput.value = rendering.canvas.width.toString();
+    heightInput.value = rendering.canvas.height.toString();
 }
 
 function parsePalette(text) {
@@ -121,11 +233,6 @@ function makeDrawable(rendering) {
         prevCursor = [x1, y1];
     });
     document.addEventListener('pointerup', (event) => prevCursor = undefined);
-}
-
-const rendering = createRendering2D(128, 128);
-function clearImage() {
-    fillRendering2D(rendering);
 }
 
 /** @type {HTMLElement[]} */
@@ -213,9 +320,11 @@ async function exportImage() {
 }
 
 function exportEditor() {
+    project.drawings.forEach((drawing) => {
+        drawing.image = drawingToRendering2d.get(drawing).canvas.toDataURL("image/png");
+    });
+
     const dataElement = document.getElementById("exquisite-tool-b-data");
-    const drawing = /** @type {HTMLCanvasElement} */ (document.getElementById("drawing"));
-    project.image = drawing.toDataURL('image/png');
     dataElement.innerHTML = JSON.stringify(project);
 
     const clone = /** @type {HTMLElement} */ (document.documentElement.cloneNode(true));
