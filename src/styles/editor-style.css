@@ -25,6 +25,7 @@ h2 {
 }
 #scene-container {
     width: 512px; height: 512px;
+    display: flex;
 }
 #scene-container > canvas {
     background: var(--trans-gradient);
@@ -80,4 +81,10 @@ textarea.error {
 
     display: flex; flex-direction: column;
     gap: 8px;
+}
+
+#scene-container > #cursor {
+    background: none;
+    position: absolute;
+    pointer-events: none;
 }

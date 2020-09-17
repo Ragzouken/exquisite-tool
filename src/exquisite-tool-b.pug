@@ -25,29 +25,30 @@ html
                     select#drawing-select
                         option test
                 .buttons-row
-                    span name
+                    span 📝 name
                     input#drawing-name(type="text")
                 .buttons-row
                     input#resize-width(type="number" min="1" max="512")
                     input#resize-height(type="number" min="1" max="512")
-                    button#resize-submit resize
+                    button#resize-submit 🖼 resize
                 .buttons-row
-                    button#clone-button clone
-                    button#clear-button clear
-                    button#delete-button delete
+                    button#clone-button 📃 clone
+                    button#clear-button ⬜ clear
+                    button#delete-button ❌ delete
             #brushes-row
                 #brushes-container
             h2 brush editor
             textarea#brush-editor
             h2 palette editor
             textarea#palette-editor
-            .buttons-row
-                button(title="download a copy of the image" onclick="exportImage()") export image
-                button(title="create a new brush from the active brush" onclick="duplicateBrush()") duplicate brush
-                button(title="delete active brush" onclick="deleteBrush()") delete brush
-            .buttons-row
-                button(title="download a copy of the editor and brushes" onclick="exportEditor()") export
-                button#import-button(title="import colors and brushes from another export") import
+            .settings-section
+                .buttons-row
+                    button(title="download a copy of the image" onclick="exportImage()") export image
+                    button(title="create a new brush from the active brush" onclick="duplicateBrush()") duplicate brush
+                    button(title="delete active brush" onclick="deleteBrush()") delete brush
+                .buttons-row
+                    button(title="download a copy of the editor and brushes" onclick="exportEditor()") export
+                    button#import-button(title="import colors and brushes from another export") import
         #scene-container
         #data(hidden)
             script#exquisite-tool-b-data(type="application/json")

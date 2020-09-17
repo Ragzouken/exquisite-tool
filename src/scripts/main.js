@@ -10,13 +10,6 @@ async function start() {
     const sceneContainer = document.getElementById("scene-container");
     sceneContainer.innerHTML = "";
 
-    //sceneContainer.append(rendering.canvas);
-    //rendering.canvas.setAttribute("style", "width: 512px; height: 512px;");
-    //rendering.canvas.id = "drawing";
-    //makeDrawable(rendering);
-    //fillRendering2D(rendering);
-    loadImage(project.image).then((image) => rendering.drawImage(image, 0, 0));
-
     const brushEditor = /** @type {HTMLTextAreaElement} */ (document.getElementById("brush-editor"));
     function updateBrushFromEditor() {
         project.brushes[activeBrushId] = brushEditor.value;
@@ -163,21 +156,30 @@ function getDrawingSettingsPanel() {
 let activeDrawing;
 function getActiveRendering() { return drawingToRendering2d.get(activeDrawing); }
 
+const cursor = createRendering2D(8, 8);
+cursor.canvas.setAttribute("id", "cursor");
+
 function setActiveDrawing(drawing) {
-    activeDrawing = drawing;
     const container = document.getElementById("scene-container");
-    while (container.children.length) container.removeChild(container.children[0]);
+    const active = getActiveRendering();
+    if (active) container.removeChild(active.canvas);
+    activeDrawing = drawing;
     const rendering = drawingToRendering2d.get(drawing);
     container.appendChild(rendering.canvas);
 
-    const [w, h] = [rendering.canvas.width * 4, rendering.canvas.height * 4];
+    const [w, h] = [rendering.canvas.width, rendering.canvas.height];
+    const zoom = Math.min(512/w, 512/h)|0;
     rendering.canvas.setAttribute("id", "drawing");
-    rendering.canvas.setAttribute("style", `width: ${w}px; height: ${h}px;`);
+    rendering.canvas.setAttribute("style", `width: ${w*zoom}px; height: ${h*zoom}px`);
 
-    const widthInput = document.getElementById("resize-width");
-    const heightInput = document.getElementById("resize-height");
-    widthInput.value = rendering.canvas.width.toString();
-    heightInput.value = rendering.canvas.height.toString();
+    resizeRendering2D(cursor, w, h);
+    container.appendChild(cursor.canvas);
+    cursor.canvas.setAttribute("style", `width: ${w*zoom}px; height: ${h*zoom}px`);
+
+    const panel = getDrawingSettingsPanel();
+    panel.widthInput.value = rendering.canvas.width.toString();
+    panel.heightInput.value = rendering.canvas.height.toString();
+    panel.nameInput.value = drawing.name;
 }
 
 function parsePalette(text) {
@@ -207,10 +209,10 @@ function parsePalette(text) {
 function makeDrawable(rendering) {
     let prevCursor = undefined;
 
-    function draw(x, y) {
+    function draw(x, y, target = rendering) {
         const brush = getActiveBrush().canvas;
         const [ox, oy] = [brush.width / 2, brush.height / 2];
-        rendering.drawImage(brush, x - ox|0, y - oy|0);
+        target.drawImage(brush, x - ox|0, y - oy|0);
     }
 
     function eventToPixel(event) {
@@ -226,9 +228,11 @@ function makeDrawable(rendering) {
         prevCursor = [x1, y1];
     });
     document.addEventListener('pointermove', (event) => {
-        if (prevCursor === undefined) return;
-        const [x0, y0] = prevCursor;
         const [x1, y1] = eventToPixel(event);
+        fillRendering2D(cursor);
+        draw(x1, y1, cursor);
+        if (prevCursor === undefined) return;      
+        const [x0, y0] = prevCursor;  
         lineplot(x0, y0, x1, y1, draw);
         prevCursor = [x1, y1];
     });
