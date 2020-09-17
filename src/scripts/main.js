@@ -229,8 +229,10 @@ function makeDrawable(rendering) {
     });
     document.addEventListener('pointermove', (event) => {
         const [x1, y1] = eventToPixel(event);
-        fillRendering2D(cursor);
-        draw(x1, y1, cursor);
+        if (rendering.canvas.parentElement) {
+            fillRendering2D(cursor);
+            draw(x1, y1, cursor);
+        }
         if (prevCursor === undefined) return;      
         const [x0, y0] = prevCursor;  
         lineplot(x0, y0, x1, y1, draw);
