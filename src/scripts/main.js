@@ -14,7 +14,7 @@ function start() {
     rendering.canvas.setAttribute("style", "width: 512px; height: 512px;");
     rendering.canvas.id = "drawing";
     makeDrawable(rendering);
-    clearRendering2D(rendering);
+    fillRendering2D(rendering);
     loadImage(project.image).then((image) => rendering.drawImage(image, 0, 0));
 
     const brushEditor = /** @type {HTMLTextAreaElement} */ (document.getElementById("brush-editor"));
@@ -35,8 +35,8 @@ function start() {
     
     updatePaletteFromEditor();
 
-    //const wheel = new ColorWheel({});
-    //document.body.appendChild(wheel.root);
+    const wheel = new ColorWheel({});
+    document.body.appendChild(wheel.root);
 
     const importInput = html("input", { "type": "file", "hidden": "true", "accept": ".html" });
     document.body.appendChild(importInput);
@@ -125,7 +125,7 @@ function makeDrawable(rendering) {
 
 const rendering = createRendering2D(128, 128);
 function clearImage() {
-    clearRendering2D(rendering);
+    fillRendering2D(rendering);
 }
 
 /** @type {HTMLElement[]} */

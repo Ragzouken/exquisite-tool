@@ -16,13 +16,14 @@ function createRendering2D(width, height) {
  * @param {CanvasRenderingContext2D} rendering 
  * @param {string | CanvasGradient | CanvasPattern | undefined} fillStyle
  */
-function clearRendering2D(rendering, fillStyle = undefined) {
-    rendering.clearRect(0, 0, rendering.canvas.width, rendering.canvas.height);
+function fillRendering2D(rendering, fillStyle = undefined) {
     if (fillStyle !== undefined) {
         const prevStyle = rendering.fillStyle;
         rendering.fillStyle = fillStyle;
         rendering.fillRect(0, 0, rendering.canvas.width, rendering.canvas.height);
         rendering.fillStyle = prevStyle;
+    } else {
+        rendering.clearRect(0, 0, rendering.canvas.width, rendering.canvas.height);
     }
 }
 
@@ -59,6 +60,17 @@ function withPixels(rendering, action) {
     const imageData = rendering.getImageData(0, 0, rendering.canvas.width, rendering.canvas.height);
     action(new Uint32Array(imageData.data.buffer));
     rendering.putImageData(imageData, 0, 0);
+}
+
+/**
+ * @param {CanvasRenderingContext2D} mask 
+ * @param {string} style 
+ */
+function recolorMask(mask, style) {
+    const recolored = copyRendering2D(mask);
+    recolored.globalCompositeOperation = "source-in";
+    fillRendering2D(recolored, style);
+    return recolored;
 }
 
 /**

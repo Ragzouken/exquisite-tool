@@ -68,8 +68,8 @@ class ColorWheel {
         resizeRendering2D(this.hsWheelRenderering, this.options.wheelSize, this.options.wheelSize);
         resizeRendering2D(this.vBarRendering, this.options.wheelSize, this.sliderHeight);
 
-        clearRendering2D(this.hsWheelRenderering);
-        clearRendering2D(this.vBarRendering);
+        fillRendering2D(this.hsWheelRenderering);
+        fillRendering2D(this.vBarRendering);
 
         const wc = this.wheelCenter;
         const wr = this.wheelRadius;
