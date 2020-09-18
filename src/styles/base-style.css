@@ -38,3 +38,5 @@ canvas, image {
     image-rendering: pixelated;
     image-rendering: crisp-edges;
 }
+
+hr { width: 100%; flex: 1 }

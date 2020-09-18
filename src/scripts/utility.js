@@ -1,4 +1,12 @@
 /**
+ * @param {HTMLElement} element 
+ */
+function removeAllChildren(element) {
+    while (element.children.length) 
+        element.removeChild(element.children[0]);   
+}
+
+/**
  * @param {MouseEvent | Touch} event 
  * @param {HTMLElement} element 
  */
@@ -87,13 +95,27 @@ function nanoid(size = 21) {
 
 /**
  * @param {File} file 
+ * @return {Promise<string>}
  */
 async function textFromFile(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onerror = reject;
-        reader.onload = () => resolve(reader.result);
+        reader.onload = () => resolve(/** @type {string} */ (reader.result));
         reader.readAsText(file); 
+    });
+}
+
+/**
+ * @param {File} file 
+ * @return {Promise<string>}
+ */
+async function dataURLFromFile(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = reject;
+        reader.onload = () => resolve(/** @type {string} */ (reader.result));
+        reader.readAsDataURL(file); 
     });
 }
 

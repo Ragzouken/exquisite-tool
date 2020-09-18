@@ -1,44 +1,28 @@
+/** @type {{ drawings: any[], [key: string]: any }} */
 let project;
 let palette = { default: 0 };
 /** @type {string} */
 let activeBrushId;
 
 async function start() {
-    const dataElement = document.getElementById("exquisite-tool-b-data");
+    const dataElement = document.getElementById("exquisite-tool-c-data");
     project = JSON.parse(dataElement.innerHTML);
 
     const sceneContainer = document.getElementById("scene-container");
     sceneContainer.innerHTML = "";
 
-    const brushEditor = /** @type {HTMLTextAreaElement} */ (document.getElementById("brush-editor"));
-    function updateBrushFromEditor() {
-        project.brushes[activeBrushId] = brushEditor.value;
-        reloadAllBrushes();
-    }
-    brushEditor.addEventListener("input", () => updateBrushFromEditor());
-
-    const paletteEditor = /** @type {HTMLTextAreaElement} */ (document.getElementById("palette-editor"));
-    function updatePaletteFromEditor() {
-        project.palette = paletteEditor.value;
-        palette = parsePalette(project.palette);
-        reloadAllBrushes();
-    }
-    paletteEditor.addEventListener("input", () => updatePaletteFromEditor());
-    paletteEditor.value = project.palette;
-    
-    updatePaletteFromEditor();
-
-    const wheel = new ColorWheel({});
-    document.body.appendChild(wheel.root);
+    //const wheel = new ColorWheel({});
+    //document.body.appendChild(wheel.root);
 
     const importInput = html("input", { "type": "file", "hidden": "true", "accept": ".html" });
+    const importDrawingInput = html("input", { "type": "file", "hidden": "true", "accept": "image/*" });
     document.body.appendChild(importInput);
+    document.body.appendChild(importDrawingInput);
     const importButton = document.getElementById("import-button");
     importButton.addEventListener("click", () => importInput.click());
 
     importInput.addEventListener("change", async () => {
         const files = Array.from((importInput.files || []));
-        const existing = new Set(Object.values(project.brushes));
 
         async function importFile(file) {
             const text = await textFromFile(file);
@@ -46,23 +30,37 @@ async function start() {
             const json = html.querySelector("#exquisite-tool-b-data").innerHTML;
             const data = JSON.parse(json);
 
-            Object.entries(data.brushes).forEach(([id, brush]) => {
-                if (!existing.has(brush)) project.brushes[nanoid()] = brush;
-            });
-
-            const palette = Object.assign(parsePalette(data.palette), parsePalette(project.palette));
-            delete palette["default"];
-            project.palette = Object.entries(palette).map(([char, number]) => `${char} ${numberToHex(number)}`).join("\n");
+            project.drawings.push(...data.drawings);
         }
 
         await Promise.all(files.map(importFile));
-        paletteEditor.value = project.palette;
-        updatePaletteFromEditor();
+        reloadAllDrawings();
+    });
+
+    importDrawingInput.addEventListener("change", async () => {
+        const files = Array.from((importDrawingInput.files || []));
+
+        async function importFile(file) {
+            const drawing = {
+                id: nanoid(),
+                name: file.name,
+                image: await dataURLFromFile(file),
+            };
+            project.drawings.push(drawing);
+            return drawing;
+        }
+
+        const [drawing] = await Promise.all(files.map(importFile));
+        await reloadAllDrawings();
+        setActiveDrawing(drawing);
     });
 
     const panel = getDrawingSettingsPanel();
     panel.drawingSelect.addEventListener("input", () => {
         setActiveDrawing(project.drawings[parseInt(panel.drawingSelect.value, 10)]);
+    });
+    panel.importButton.addEventListener("click", () => {
+        importDrawingInput.click();
     });
     panel.nameInput.addEventListener("input", () => {
         activeDrawing.name = panel.nameInput.value;
@@ -85,6 +83,11 @@ async function start() {
         setActiveDrawing(clone);
         refreshDrawingSelect();
     });
+    panel.exportButton.addEventListener("click", () => {
+        getActiveRendering().canvas.toBlob(blob => {
+            if (blob) saveAs(blob, `${activeDrawing.name}.png`);
+        });
+    });
     panel.clearButton.addEventListener("click", () => {
         fillRendering2D(getActiveRendering());
     });
@@ -99,14 +102,22 @@ async function start() {
         setActiveDrawing(first);
         refreshDrawingSelect();
     });
+    
+    brushSelect.addEventListener("input", () => {
+        activeBrush = project.drawings[parseInt(brushSelect.value, 10)];
+    });
 
     await reloadAllDrawings();
-    refreshDrawingSelect();
 }
 
+/** @type { Map<any, CanvasRenderingContext2D> } */
 const drawingToRendering2d = new Map();
 
 async function reloadAllDrawings() {
+    const container = document.getElementById("scene-container");
+    const active = getActiveRendering();
+    if (active) container.removeChild(active.canvas);
+    activeDrawing = undefined;
     drawingToRendering2d.clear();
 
     async function reload(drawing) {
@@ -121,21 +132,28 @@ async function reloadAllDrawings() {
 
     const first = Array.from(drawingToRendering2d.keys())[0];
     setActiveDrawing(first);
+    activeBrush = first;
+
+    refreshDrawingSelect();
 }
 
 function refreshDrawingSelect() {
     const panel = getDrawingSettingsPanel();
-    
-    while (panel.drawingSelect.children.length) 
-        panel.drawingSelect.removeChild(panel.drawingSelect.children[0]);
+
+    removeAllChildren(panel.drawingSelect);
+    removeAllChildren(brushSelect);
 
     const options = project.drawings.map((drawing, i) => html("option", { value: i }, drawing.name));
     options.forEach((option) => panel.drawingSelect.appendChild(option));
     panel.drawingSelect.value = project.drawings.indexOf(activeDrawing);
+
+    const copies = options.map(option => /** @type {HTMLOptionElement} */ (option.cloneNode(true)));
+    copies.forEach((option) => brushSelect.appendChild(option));
 }
 
 function getDrawingSettingsPanel() {
     const drawingSelect = document.getElementById("drawing-select");
+    const importButton = document.getElementById("import-drawing");
     const nameInput = document.getElementById("drawing-name");
 
     const widthInput = document.getElementById("resize-width");
@@ -143,21 +161,25 @@ function getDrawingSettingsPanel() {
     const resizeButton = document.getElementById("resize-submit");
 
     const cloneButton = document.getElementById("clone-button");
+    const exportButton = document.getElementById("export-drawing");
     const clearButton = document.getElementById("clear-button");
     const deleteButton = document.getElementById("delete-button");
 
     return { 
-        drawingSelect, nameInput,
+        drawingSelect, importButton, nameInput,
         widthInput, heightInput, resizeButton,
-        cloneButton, clearButton, deleteButton,
+        cloneButton, exportButton,
+        clearButton, deleteButton,
     }
 }
 
-let activeDrawing;
+let activeDrawing, activeBrush;
 function getActiveRendering() { return drawingToRendering2d.get(activeDrawing); }
 
 const cursor = createRendering2D(8, 8);
 cursor.canvas.setAttribute("id", "cursor");
+
+const brushSelect = document.getElementById("brush-select");
 
 function setActiveDrawing(drawing) {
     const container = document.getElementById("scene-container");
@@ -168,7 +190,7 @@ function setActiveDrawing(drawing) {
     container.appendChild(rendering.canvas);
 
     const [w, h] = [rendering.canvas.width, rendering.canvas.height];
-    const zoom = Math.min(512/w, 512/h)|0;
+    const zoom = Math.max(Math.min(512/w, 512/h)|0, 1);
     rendering.canvas.setAttribute("id", "drawing");
     rendering.canvas.setAttribute("style", `width: ${w*zoom}px; height: ${h*zoom}px`);
 
@@ -180,6 +202,8 @@ function setActiveDrawing(drawing) {
     panel.widthInput.value = rendering.canvas.width.toString();
     panel.heightInput.value = rendering.canvas.height.toString();
     panel.nameInput.value = drawing.name;
+    
+    panel.drawingSelect.value = project.drawings.indexOf(drawing);
 }
 
 function parsePalette(text) {
@@ -241,88 +265,8 @@ function makeDrawable(rendering) {
     document.addEventListener('pointerup', (event) => prevCursor = undefined);
 }
 
-/** @type {HTMLElement[]} */
-const brushToggles = [];
-const brushContainer = document.getElementById("brushes-container");
-const brushEditor = /** @type {HTMLTextAreaElement} */ (document.getElementById("brush-editor"));
-const brushes = [];
-
-const paletteEditor = /** @type {HTMLTextAreaElement} */ (document.getElementById("palette-editor"));
-
-/**
- * @param {string} brushId
- */
-function setActiveBrush(brushId) {
-    activeBrushId = brushId;
-    brushes.forEach((brush) => {
-        brush.toggle.classList.toggle("active", activeBrushId === brush.brushId);
-    });
-    if (activeBrushId)
-        brushEditor.value = project.brushes[activeBrushId];
-}
-
 function getActiveBrush() {
-    return brushes.find((brush) => brush.brushId === activeBrushId);
-}
-
-/**
-* @param {string} brushId
-* @param {CanvasRenderingContext2D} rendering 
-*/
-function addBrush(brushId, rendering) {
-    const toggle = copyRendering2D(rendering).canvas;
-    toggle.classList.add("tool-toggle");
-    brushToggles.push(toggle);
-    brushContainer.appendChild(toggle);
-
-    const brush = {
-        brushId,
-        toggle,
-        context: rendering,
-        canvas: rendering.canvas,
-    };
-    brushes.push(brush);
-
-    toggle.addEventListener('click', (event) => setActiveBrush(brushId));
-
-    return brush;
-}
-
-function clearBrushes() {
-    brushToggles.length = 0;
-    brushContainer.innerHTML = "";
-    brushes.length = 0;
-}
-
-function reloadAllBrushes() {
-    clearBrushes();
-    Object.entries(project.brushes).forEach(([id, text]) => {
-        const brush = textToRendering2D(text, palette);
-        addBrush(id, brush);
-    });
-
-    setActiveBrush((getActiveBrush() || brushes[0]).brushId);
-}
-
-function deleteBrush() {
-    if (brushes.length === 0) return;
-
-    delete project.brushes[activeBrushId];
-    reloadAllBrushes();
-}
-
-function duplicateBrush() {
-    const brushId = nanoid();
-    project.brushes[brushId] = project.brushes[activeBrushId];
-    activeBrushId = brushId;
-    reloadAllBrushes();
-}
-
-async function exportImage() {
-    const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById("drawing"));
-    canvas.toBlob(blob => {
-        if (blob) saveAs(blob, "image.png");
-    });
+    return drawingToRendering2d.get(activeBrush);
 }
 
 function exportEditor() {
@@ -330,7 +274,7 @@ function exportEditor() {
         drawing.image = drawingToRendering2d.get(drawing).canvas.toDataURL("image/png");
     });
 
-    const dataElement = document.getElementById("exquisite-tool-b-data");
+    const dataElement = document.getElementById("exquisite-tool-c-data");
     dataElement.innerHTML = JSON.stringify(project);
 
     const clone = /** @type {HTMLElement} */ (document.documentElement.cloneNode(true));

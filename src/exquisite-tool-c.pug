@@ -1,7 +1,7 @@
 doctype html
 html
     head
-        title exquisite tool b
+        title exquisite tool c
         meta(charset="utf-8")
         // third party libraries
         script
@@ -22,8 +22,11 @@ html
             #drawing-settings-panel.settings-section
                 .buttons-row
                     span active drawing
+                    button#import-drawing 📂 import image
+                .buttons-row
                     select#drawing-select
                         option test
+                hr
                 .buttons-row
                     span 📝 name
                     input#drawing-name(type="text")
@@ -33,26 +36,22 @@ html
                     button#resize-submit 🖼 resize
                 .buttons-row
                     button#clone-button 📃 clone
+                    button#export-drawing 📦 export image
+                .buttons-row
                     button#clear-button ⬜ clear
                     button#delete-button ❌ delete
             #brushes-row
                 #brushes-container
-            h2 brush editor
-            textarea#brush-editor
-            h2 palette editor
-            textarea#palette-editor
+                select#brush-select
+                    option test
             .settings-section
                 .buttons-row
-                    button(title="download a copy of the image" onclick="exportImage()") export image
-                    button(title="create a new brush from the active brush" onclick="duplicateBrush()") duplicate brush
-                    button(title="delete active brush" onclick="deleteBrush()") delete brush
-                .buttons-row
-                    button(title="download a copy of the editor and brushes" onclick="exportEditor()") export
-                    button#import-button(title="import colors and brushes from another export") import
+                    button(title="download a copy of the editor and drawings" onclick="exportEditor()") 📦 export tool
+                    button#import-button(title="import drawings from another export") 📂 import tool
         #scene-container
         #data(hidden)
-            script#exquisite-tool-b-data(type="application/json")
-                include exquisite-tool-b-data.json
+            script#exquisite-tool-c-data(type="application/json")
+                include exquisite-tool-c-data.json
         // scripts
         script
             include scripts/main.js
