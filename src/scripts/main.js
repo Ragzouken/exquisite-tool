@@ -39,7 +39,8 @@ async function start() {
         }
 
         await Promise.all(files.map(importFile));
-        reloadAllDrawings();
+        await reloadAllDrawings();
+        importInput.value = "";
     });
 
     importDrawingInput.addEventListener("change", async () => {
