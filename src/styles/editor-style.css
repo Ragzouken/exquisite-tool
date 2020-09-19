@@ -45,7 +45,7 @@ h2 {
     display: flex; flex-direction: row; gap: 8px;
     flex-wrap: wrap; justify-content: stretch;
 }
-.buttons-row > button {
+.buttons-row > * {
     flex: 1;
 }
 
@@ -53,11 +53,11 @@ input, select {
     flex: 1;
 }
 
-.tool-toggle {
+.brush-toggle {
     width: 64px; height: 64px;
     object-fit: contain;
 }
-.tool-toggle.active {
+.brush-toggle.active {
     outline: 2px solid white;
 }
 textarea {

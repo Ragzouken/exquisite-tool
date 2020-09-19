@@ -35,15 +35,20 @@ html
                     input#resize-height(type="number" min="1" max="512")
                     button#resize-submit 🖼 resize
                 .buttons-row
-                    button#clone-button 📃 clone
+                    button#clone-button 📃 duplicate
                     button#export-drawing 📦 export image
                 .buttons-row
                     button#clear-button ⬜ clear
                     button#delete-button ❌ delete
-            #brushes-row
+            #brush-settings-panel.settings-section
+                .buttons-row
+                    span active brush
+                    div
+                    label
+                        | erase
+                        input#erase-toggle(type="checkbox")
                 #brushes-container
-                select#brush-select
-                    option test
+            #color-container.settings-section(hidden)
             .settings-section
                 .buttons-row
                     button(title="download a copy of the editor and drawings" onclick="exportEditor()") 📦 export tool

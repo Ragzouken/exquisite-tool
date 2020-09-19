@@ -4,6 +4,8 @@ let palette = { default: 0 };
 /** @type {string} */
 let activeBrushId;
 
+const wheel = new ColorWheel({});
+
 async function start() {
     const dataElement = document.getElementById("exquisite-tool-c-data");
     project = JSON.parse(dataElement.innerHTML);
@@ -11,8 +13,8 @@ async function start() {
     const sceneContainer = document.getElementById("scene-container");
     sceneContainer.innerHTML = "";
 
-    //const wheel = new ColorWheel({});
-    //document.body.appendChild(wheel.root);
+    document.getElementById("color-container").appendChild(wheel.root);
+    wheel.root.addEventListener("input", () => refreshSpecialBrush());
 
     const importInput = html("input", { "type": "file", "hidden": "true", "accept": ".html" });
     const importDrawingInput = html("input", { "type": "file", "hidden": "true", "accept": "image/*" });
@@ -27,10 +29,13 @@ async function start() {
         async function importFile(file) {
             const text = await textFromFile(file);
             const html = await htmlFromText(text);
-            const json = html.querySelector("#exquisite-tool-b-data").innerHTML;
+            const json = html.querySelector("#exquisite-tool-c-data").innerHTML;
             const data = JSON.parse(json);
 
-            project.drawings.push(...data.drawings);
+            const existing = new Set(project.drawings.map((drawing) => drawing.image));
+            const extra = data.drawings.filter((drawing) => !existing.has(drawing.image));
+
+            project.drawings.push(...extra);
         }
 
         await Promise.all(files.map(importFile));
@@ -97,14 +102,12 @@ async function start() {
         const index = project.drawings.indexOf(activeDrawing);
         project.drawings.splice(index, 1);
 
+        const container = document.getElementById("scene-container");
+        container.removeChild(getActiveRendering().canvas);
         drawingToRendering2d.delete(activeDrawing);
         const first = Array.from(drawingToRendering2d.keys())[0];
         setActiveDrawing(first);
         refreshDrawingSelect();
-    });
-    
-    brushSelect.addEventListener("input", () => {
-        activeBrush = project.drawings[parseInt(brushSelect.value, 10)];
     });
 
     await reloadAllDrawings();
@@ -137,18 +140,60 @@ async function reloadAllDrawings() {
     refreshDrawingSelect();
 }
 
+const specialRendering = createRendering2D(1, 1);
+const specialToggle = specialRendering.canvas;
+const specialBrush = {
+    id: "",
+    name: "color brush",
+    image: "",
+}
+specialToggle.setAttribute("title", "color brush");
+specialToggle.classList.add("brush-toggle")
+function refreshSpecialBrush() {
+    drawingToRendering2d.set(specialBrush, specialRendering);
+    const { r, g, b } = HSVtoRGB(wheel.color);
+    fillRendering2D(specialRendering, `rgb(${r} ${g} ${b})`);
+}
+
+const colorContainer = document.getElementById("color-container");
+
 function refreshDrawingSelect() {
     const panel = getDrawingSettingsPanel();
 
     removeAllChildren(panel.drawingSelect);
-    removeAllChildren(brushSelect);
 
     const options = project.drawings.map((drawing, i) => html("option", { value: i }, drawing.name));
     options.forEach((option) => panel.drawingSelect.appendChild(option));
     panel.drawingSelect.value = project.drawings.indexOf(activeDrawing);
 
-    const copies = options.map(option => /** @type {HTMLOptionElement} */ (option.cloneNode(true)));
-    copies.forEach((option) => brushSelect.appendChild(option));
+    const brushesContainer = document.getElementById("brushes-container");
+    const brushToggles = /** @type {Map<any, HTMLElement>} */ (new Map());
+    removeAllChildren(brushesContainer);
+
+    brushesContainer.appendChild(specialToggle);
+    refreshSpecialBrush();
+
+    specialToggle.onclick = function() {
+        activeBrush = specialBrush;
+        colorContainer.hidden = false;
+        specialToggle.classList.toggle("active", true);
+        brushToggles.forEach((toggle, drawing_) => toggle.classList.toggle("active", false));
+    };
+
+    project.drawings.forEach((drawing) => {
+        const toggle = copyRendering2D(drawingToRendering2d.get(drawing)).canvas;
+        toggle.setAttribute("title", drawing.name);
+        toggle.classList.add("brush-toggle");
+        toggle.classList.toggle("active", drawing === brushToggles);
+        brushToggles.set(drawing, toggle);
+        toggle.addEventListener("click", () => {
+            activeBrush = drawing;
+            colorContainer.hidden = true;
+            specialToggle.classList.toggle("active", false);
+            brushToggles.forEach((toggle, drawing_) => toggle.classList.toggle("active", drawing === drawing_));
+        });
+        brushesContainer.appendChild(toggle);
+    });
 }
 
 function getDrawingSettingsPanel() {
@@ -178,8 +223,6 @@ function getActiveRendering() { return drawingToRendering2d.get(activeDrawing); 
 
 const cursor = createRendering2D(8, 8);
 cursor.canvas.setAttribute("id", "cursor");
-
-const brushSelect = document.getElementById("brush-select");
 
 function setActiveDrawing(drawing) {
     const container = document.getElementById("scene-container");
@@ -218,6 +261,8 @@ function parsePalette(text) {
     return palette;
 }
 
+const eraseToggle = document.getElementById("erase-toggle");
+
 /**
  * @typedef {Object} Brush
  * @property {string} brushId
@@ -236,7 +281,8 @@ function makeDrawable(rendering) {
     function draw(x, y, target = rendering) {
         const brush = getActiveBrush().canvas;
         const [ox, oy] = [brush.width / 2, brush.height / 2];
-        target.drawImage(brush, x - ox|0, y - oy|0);
+        target.globalCompositeOperation = (eraseToggle.checked && target === rendering ) ? "destination-out" : "source-over";
+        target.drawImage(brush, Math.round(x - ox), Math.round(y - oy));
     }
 
     function eventToPixel(event) {
@@ -255,7 +301,8 @@ function makeDrawable(rendering) {
         const [x1, y1] = eventToPixel(event);
         if (rendering.canvas.parentElement) {
             fillRendering2D(cursor);
-            draw(x1, y1, cursor);
+            const inside = x1 >= 0 && y1 >= 0 && x1 < rendering.canvas.width && y1 < rendering.canvas.height;
+            if (prevCursor || inside) draw(x1, y1, cursor);
         }
         if (prevCursor === undefined) return;      
         const [x0, y0] = prevCursor;  

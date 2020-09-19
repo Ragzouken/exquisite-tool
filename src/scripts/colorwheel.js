@@ -55,11 +55,13 @@ class ColorWheel {
 
             this.color.h = a / (Math.PI * 2);
             this.color.s = Math.min(d / this.wheelRadius, 1);
+            this.root.dispatchEvent(new Event("input"));
             this.refresh();
         });
 
         addPressListener(this.vBarRendering.canvas, (x, y) => {
             this.color.v = Math.max(Math.min(x / this.options.wheelSize, 1), 0);
+            this.root.dispatchEvent(new Event("input"));
             this.refresh();
         });
     }
