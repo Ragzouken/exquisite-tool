@@ -15,27 +15,34 @@
 }
 body { 
     display: flex; flex-direction: row;
-    align-items: center; justify-content: center;
+    align-items: stretch; justify-content: stretch;
     width: 100vw; height: 100vh;
-    gap: 8px; padding: 8px; margin: 0;
+    padding: 0; margin: 0;
+
+    overflow: hidden;
 }
 h2 {
     font-size: large;
     margin: 0;
 }
+
 #scene-container {
-    width: 512px; height: 512px;
-    display: flex;
-}
-#scene-container > canvas {
+    flex: 1;
     background: var(--trans-gradient);
 }
+
+#scene-container > canvas {
+    outline: 1px solid white;
+    position: absolute; transform-origin: 0 0;
+}
+
 #tools-container {
     width: 320px;
     display: flex; flex-direction: column;
     gap: 8px;
     max-height: 100vh;
 }
+
 #brushes-row, #brushes-container {
     display: flex; flex-direction: row; gap: 8px;
     flex-wrap: wrap; justify-content: space-evenly;
@@ -82,6 +89,8 @@ textarea.error {
     display: flex; flex-direction: column;
     gap: 8px;
 }
+
+
 
 #scene-container > #cursor {
     background: none;

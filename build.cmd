@@ -1,1 +1,1 @@
-pug --pretty src/exquisite-tool-c.pug -o dist/
+pug --pretty src/exquisite-tool-d.pug -o dist/

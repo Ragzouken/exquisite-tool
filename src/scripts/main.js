@@ -5,9 +5,22 @@ let palette = { default: 0 };
 let activeBrushId;
 
 const wheel = new ColorWheel({});
+const dataId = "exquisite-tool-d-data";
+
+class DrawingView {
+    /**
+     * @param {any} drawing
+     * @param {HTMLCanvasElement} canvas 
+     */
+    constructor(drawing, canvas) {
+        this.drawing = drawing;
+        this.canvas = canvas;
+        this.matrix = new DOMMatrixReadOnly();
+    }
+}
 
 async function start() {
-    const dataElement = document.getElementById("exquisite-tool-c-data");
+    const dataElement = document.getElementById(dataId);
     project = JSON.parse(dataElement.innerHTML);
 
     const sceneContainer = document.getElementById("scene-container");
@@ -29,7 +42,7 @@ async function start() {
         async function importFile(file) {
             const text = await textFromFile(file);
             const html = await htmlFromText(text);
-            const json = html.querySelector("#exquisite-tool-c-data").innerHTML;
+            const json = html.querySelector("#" + dataId).innerHTML;
             const data = JSON.parse(json);
 
             const existing = new Set(project.drawings.map((drawing) => drawing.image));
@@ -181,6 +194,20 @@ function refreshDrawingSelect() {
         brushToggles.forEach((toggle, drawing_) => toggle.classList.toggle("active", false));
     };
 
+    const drawingContainer = document.getElementById("scene-container");
+    removeAllChildren(drawingContainer);
+
+    let offset = 0;
+    project.drawings.forEach((drawing) => {
+        const canvas = drawingToRendering2d.get(drawing).canvas;
+        drawing.position = { x: offset, y: 0 };
+        offset += canvas.width + 8;
+        const matrix = (new DOMMatrixReadOnly()).scale(8, 8).translate(drawing.position.x, drawing.position.y).translate(8, 8);
+        canvas.style.setProperty("transform", matrix.toString());
+
+        drawingContainer.appendChild(canvas);
+    });
+
     project.drawings.forEach((drawing) => {
         const toggle = copyRendering2D(drawingToRendering2d.get(drawing)).canvas;
         toggle.setAttribute("title", drawing.name);
@@ -231,16 +258,12 @@ function setActiveDrawing(drawing) {
     if (active) container.removeChild(active.canvas);
     activeDrawing = drawing;
     const rendering = drawingToRendering2d.get(drawing);
-    container.appendChild(rendering.canvas);
 
     const [w, h] = [rendering.canvas.width, rendering.canvas.height];
-    const zoom = Math.max(Math.min(512/w, 512/h)|0, 1);
     rendering.canvas.setAttribute("id", "drawing");
-    rendering.canvas.setAttribute("style", `width: ${w*zoom}px; height: ${h*zoom}px`);
 
     resizeRendering2D(cursor, w, h);
     container.appendChild(cursor.canvas);
-    cursor.canvas.setAttribute("style", `width: ${w*zoom}px; height: ${h*zoom}px`);
 
     const panel = getDrawingSettingsPanel();
     panel.widthInput.value = rendering.canvas.width.toString();
@@ -322,7 +345,7 @@ function exportEditor() {
         drawing.image = drawingToRendering2d.get(drawing).canvas.toDataURL("image/png");
     });
 
-    const dataElement = document.getElementById("exquisite-tool-c-data");
+    const dataElement = document.getElementById("#" + dataId);
     dataElement.innerHTML = JSON.stringify(project);
 
     const clone = /** @type {HTMLElement} */ (document.documentElement.cloneNode(true));

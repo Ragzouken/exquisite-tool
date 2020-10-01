@@ -1,2 +1,2 @@
 call build
-neocities upload -d exquisite .\dist\exquisite-tool-c.html
+neocities upload -d exquisite .\dist\exquisite-tool-d.html
