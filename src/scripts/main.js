@@ -10,12 +10,19 @@ const dataId = "exquisite-tool-d-data";
 class DrawingView {
     /**
      * @param {any} drawing
-     * @param {HTMLCanvasElement} canvas 
+     * @param {HTMLCanvasElement} canvas
+     * @param {CanvasRenderingContext2D} rendering 
      */
-    constructor(drawing, canvas) {
+    constructor(drawing, canvas, rendering) {
         this.drawing = drawing;
         this.canvas = canvas;
+        this.rendering = rendering;
         this.matrix = new DOMMatrixReadOnly();
+    }
+
+    setMatrix(matrix) {
+        this.matrix = matrix;
+        this.canvas.style.setProperty("transform", this.matrix.toString());
     }
 }
 
@@ -75,9 +82,6 @@ async function start() {
     });
 
     const panel = getDrawingSettingsPanel();
-    panel.drawingSelect.addEventListener("input", () => {
-        setActiveDrawing(project.drawings[parseInt(panel.drawingSelect.value, 10)]);
-    });
     panel.importButton.addEventListener("click", () => {
         importDrawingInput.click();
     });
@@ -95,10 +99,11 @@ async function start() {
     panel.cloneButton.addEventListener("click", () => {
         const clone = {...activeDrawing};
         clone.name += " copy";
-        const rendering = copyRendering2D(getActiveRendering());
-        makeDrawable(rendering);
-        drawingToRendering2d.set(clone, rendering);
+
         project.drawings.push(clone);
+        const rendering = copyRendering2D(getActiveRendering());
+        addDrawingFromImage(clone, rendering.canvas);
+
         setActiveDrawing(clone);
         refreshDrawingSelect();
     });
@@ -129,20 +134,50 @@ async function start() {
 
 /** @type { Map<any, CanvasRenderingContext2D> } */
 const drawingToRendering2d = new Map();
+/** @type { Map<any, DrawingView> } */
+const drawingToDrawingView = new Map();
+
+function refreshScene() {
+    let offset = 0;
+    project.drawings.forEach((drawing) => {
+        const view = drawingToDrawingView.get(drawing);
+        drawing.position = { x: offset, y: 0 };
+        offset += view.canvas.width + 8;
+        
+        const matrix = (new DOMMatrixReadOnly()).scale(8, 8).translate(drawing.position.x, drawing.position.y).translate(8, 8);
+        view.setMatrix(matrix);
+    });
+}
+
+/**
+ * @param {HTMLImageElement} image 
+ */
+function addDrawingFromImage(drawing, image) {
+    const drawingContainer = document.getElementById("scene-container");
+    
+    const rendering = imageToRendering2D(image);
+    const view = new DrawingView(drawing, rendering.canvas, rendering);
+
+    drawingContainer.appendChild(rendering.canvas);
+    drawingToRendering2d.set(drawing, rendering);
+    drawingToDrawingView.set(drawing, view);
+    makeDrawable(view);
+
+    console.log(rendering.canvas);
+}
 
 async function reloadAllDrawings() {
-    const container = document.getElementById("scene-container");
-    const active = getActiveRendering();
-    if (active) container.removeChild(active.canvas);
+    const drawingContainer = document.getElementById("scene-container");
+    removeAllChildren(drawingContainer);
+
     activeDrawing = undefined;
     drawingToRendering2d.clear();
+    drawingToDrawingView.clear();
+
 
     async function reload(drawing) {
         const image = await loadImage(drawing.image);
-        const rendering = imageToRendering2D(image);
-
-        makeDrawable(rendering);
-        drawingToRendering2d.set(drawing, rendering);
+        addDrawingFromImage(drawing, image);
     };
 
     await Promise.all(project.drawings.map(reload));
@@ -151,6 +186,7 @@ async function reloadAllDrawings() {
     setActiveDrawing(first);
     activeBrush = first;
 
+    refreshScene();
     refreshDrawingSelect();
 }
 
@@ -172,14 +208,6 @@ function refreshSpecialBrush() {
 const colorContainer = document.getElementById("color-container");
 
 function refreshDrawingSelect() {
-    const panel = getDrawingSettingsPanel();
-
-    removeAllChildren(panel.drawingSelect);
-
-    const options = project.drawings.map((drawing, i) => html("option", { value: i }, drawing.name));
-    options.forEach((option) => panel.drawingSelect.appendChild(option));
-    panel.drawingSelect.value = project.drawings.indexOf(activeDrawing);
-
     const brushesContainer = document.getElementById("brushes-container");
     const brushToggles = /** @type {Map<any, HTMLElement>} */ (new Map());
     removeAllChildren(brushesContainer);
@@ -193,20 +221,6 @@ function refreshDrawingSelect() {
         specialToggle.classList.toggle("active", true);
         brushToggles.forEach((toggle, drawing_) => toggle.classList.toggle("active", false));
     };
-
-    const drawingContainer = document.getElementById("scene-container");
-    removeAllChildren(drawingContainer);
-
-    let offset = 0;
-    project.drawings.forEach((drawing) => {
-        const canvas = drawingToRendering2d.get(drawing).canvas;
-        drawing.position = { x: offset, y: 0 };
-        offset += canvas.width + 8;
-        const matrix = (new DOMMatrixReadOnly()).scale(8, 8).translate(drawing.position.x, drawing.position.y).translate(8, 8);
-        canvas.style.setProperty("transform", matrix.toString());
-
-        drawingContainer.appendChild(canvas);
-    });
 
     project.drawings.forEach((drawing) => {
         const toggle = copyRendering2D(drawingToRendering2d.get(drawing)).canvas;
@@ -225,7 +239,6 @@ function refreshDrawingSelect() {
 }
 
 function getDrawingSettingsPanel() {
-    const drawingSelect = document.getElementById("drawing-select");
     const importButton = document.getElementById("import-drawing");
     const nameInput = document.getElementById("drawing-name");
 
@@ -239,7 +252,7 @@ function getDrawingSettingsPanel() {
     const deleteButton = document.getElementById("delete-button");
 
     return { 
-        drawingSelect, importButton, nameInput,
+        importButton, nameInput,
         widthInput, heightInput, resizeButton,
         cloneButton, exportButton,
         clearButton, deleteButton,
@@ -253,36 +266,13 @@ const cursor = createRendering2D(8, 8);
 cursor.canvas.setAttribute("id", "cursor");
 
 function setActiveDrawing(drawing) {
-    const container = document.getElementById("scene-container");
-    const active = getActiveRendering();
-    if (active) container.removeChild(active.canvas);
     activeDrawing = drawing;
     const rendering = drawingToRendering2d.get(drawing);
-
-    const [w, h] = [rendering.canvas.width, rendering.canvas.height];
-    rendering.canvas.setAttribute("id", "drawing");
-
-    resizeRendering2D(cursor, w, h);
-    container.appendChild(cursor.canvas);
 
     const panel = getDrawingSettingsPanel();
     panel.widthInput.value = rendering.canvas.width.toString();
     panel.heightInput.value = rendering.canvas.height.toString();
     panel.nameInput.value = drawing.name;
-    
-    panel.drawingSelect.value = project.drawings.indexOf(drawing);
-}
-
-function parsePalette(text) {
-    const palette = { 'default': 0 };
-    const lines = text.trim().split("\n");
-    lines.forEach((line) => {
-        try {
-            const [char, hex] = line.trim().split(/\s+/);
-            palette[char] = hexToNumber(hex);
-        } catch (e) {}
-    });
-    return palette;
 }
 
 const eraseToggle = document.getElementById("erase-toggle");
@@ -297,9 +287,12 @@ const eraseToggle = document.getElementById("erase-toggle");
  */
 
 /**
- * @param {CanvasRenderingContext2D} rendering 
+ * @param {DrawingView} drawingView 
  */
-function makeDrawable(rendering) {
+function makeDrawable(drawingView) {
+    const drawingContainer = document.getElementById("scene-container");
+
+    const rendering = drawingView.rendering;
     let prevCursor = undefined;
 
     function draw(x, y, target = rendering) {
@@ -309,10 +302,18 @@ function makeDrawable(rendering) {
         target.drawImage(brush, Math.round(x - ox), Math.round(y - oy));
     }
 
+    /**
+     * @param {MouseEvent} event 
+     */
     function eventToPixel(event) {
-        const scale = rendering.canvas.width / rendering.canvas.clientWidth;
-        const [px, py] = eventToElementPixel(event, rendering.canvas);
-        return [px * scale, py * scale];
+        const rect = drawingContainer.getBoundingClientRect();
+        const [sx, sy] = [event.clientX - rect.x, event.clientY - rect.y];
+        const inv = drawingView.matrix.inverse();
+        const pos = inv.transformPoint(new DOMPointReadOnly(sx, sy));
+
+        //const scale = rendering.canvas.width / rendering.canvas.clientWidth;
+        //const [px, py] = eventToElementPixel(event, rendering.canvas);
+        return [pos.x, pos.y];// [px * scale, py * scale];
     }
 
     rendering.canvas.addEventListener('pointerdown', (event) => {
