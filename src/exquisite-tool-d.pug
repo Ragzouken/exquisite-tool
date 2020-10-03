@@ -19,6 +19,9 @@ html
             include styles/editor-style.css
     body(onload="start()")
         #tools-container
+            .buttons-row
+                button#select-mode-button select
+                button#draw-mode-button draw
             #drawing-settings-panel.settings-section
                 .buttons-row
                     span active drawing

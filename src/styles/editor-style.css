@@ -27,6 +27,7 @@ h2 {
 }
 
 #scene-container {
+    position: relative; overflow: hidden; /* clip things */
     flex: 1;
     background: var(--trans-gradient);
 }

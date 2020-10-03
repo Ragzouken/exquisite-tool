@@ -85,6 +85,20 @@ async function start() {
         setActiveDrawing(drawing);
     });
 
+    const drawingPanel = document.getElementById("drawing-settings-panel");
+    const brushPanel = document.getElementById("brush-settings-panel");
+    document.getElementById("select-mode-button").addEventListener("click", () => {
+        mode = "select";
+        drawingPanel.hidden = false;
+        brushPanel.hidden = true;
+    });
+
+    document.getElementById("draw-mode-button").addEventListener("click", () => {
+        mode = "draw";
+        drawingPanel.hidden = true;
+        brushPanel.hidden = false;
+    })
+
     const panel = getDrawingSettingsPanel();
     panel.importButton.addEventListener("click", () => {
         importDrawingInput.click();
@@ -142,13 +156,15 @@ const drawingToRendering2d = new Map();
 const drawingToDrawingView = new Map();
 
 function refreshScene() {
-    let offset = 0;
+    let offset = 8;
     project.drawings.forEach((drawing) => {
         const view = drawingToDrawingView.get(drawing);
-        drawing.position = { x: offset, y: 0 };
+        drawing.position = { x: offset, y: 8 };
         offset += view.canvas.width + 8;
         
-        const matrix = (new DOMMatrixReadOnly()).scale(8, 8).translate(drawing.position.x, drawing.position.y).translate(8, 8);
+        const transform = (new DOMMatrix()).translate(drawing.position.x, drawing.position.y);
+        const matrix = sceneTransform.multiply(transform);
+
         view.setMatrix(matrix);
     });
 }
@@ -166,8 +182,6 @@ function addDrawingFromImage(drawing, image) {
     drawingToRendering2d.set(drawing, rendering);
     drawingToDrawingView.set(drawing, view);
     makeDrawable(view);
-
-    console.log(rendering.canvas);
 }
 
 async function reloadAllDrawings() {
@@ -264,7 +278,7 @@ function getDrawingSettingsPanel() {
 }
 
 /** @type { "select" | "draw" } */
-let mode = "draw";
+let mode = "select";
 let activeDrawing, activeBrush;
 function getActiveRendering() { return drawingToRendering2d.get(activeDrawing); }
 
@@ -292,6 +306,9 @@ const eraseToggle = document.getElementById("erase-toggle");
  * @property {HTMLElement} dataElement
  */
 
+const sceneTransform = new DOMMatrix();
+sceneTransform.scaleSelf(4, 4);
+
 /**
  * @param {DrawingView} drawingView 
  */
@@ -310,6 +327,13 @@ function makeDrawable(drawingView) {
         target.drawImage(brush, Math.round(x - ox), Math.round(y - oy));
     }
 
+    function mouseEventToSceneMatrix(event) {
+        const rect = drawingContainer.getBoundingClientRect();
+        const [sx, sy] = [event.clientX - rect.x, event.clientY - rect.y];
+        const matrix = (new DOMMatrixReadOnly()).translate(sx, sy);
+        return sceneTransform.inverse().multiply(matrix);
+    }
+
     /**
      * @param {MouseEvent} event 
      */
@@ -321,6 +345,15 @@ function makeDrawable(drawingView) {
         return [pos.x, pos.y];
     }
 
+    function position(matrix) {
+        return matrix.transformPoint(new DOMPoint(0, 0));
+    }
+
+    function scale(matrix) {
+        const t = grabCursor.transformPoint(new DOMPoint(1, 0));
+        return Math.sqrt(t.x*t.x +t.y*t.y);
+    }
+
     rendering.canvas.addEventListener('pointerdown', (event) => {
         killEvent(event);
         const [x1, y1] = eventToPixel(event);
@@ -329,11 +362,12 @@ function makeDrawable(drawingView) {
             draw(x1, y1);
             prevCursor = [x1, y1];
         } else {
-            const rect = drawingContainer.getBoundingClientRect();
-            const [sx, sy] = [event.clientX - rect.x, event.clientY - rect.y];
-            const pos = drawingView.matrixInv.multiply((new DOMMatrixReadOnly()).translate(sx, sy));
             setActiveDrawing(drawingView.drawing);
-            grabCursor = pos;
+
+            const mouseScene = mouseEventToSceneMatrix(event);
+            const drawingScene = sceneTransform.inverse().multiply(drawingView.matrix);
+            const matrix = drawingScene.inverse().multiply(mouseScene);
+            grabCursor = matrix.inverse();
         }
     });
     document.addEventListener('pointermove', (event) => {
@@ -348,13 +382,18 @@ function makeDrawable(drawingView) {
             lineplot(x0, y0, x1, y1, draw);
             prevCursor = [x1, y1];
         } else if (grabCursor) {
-            const rect = drawingContainer.getBoundingClientRect();
-            const [sx, sy] = [event.clientX - rect.x, event.clientY - rect.y];
-            const d2 = grabCursor.multiply(new DOMMatrix().scale(16, 16).translate(sx, sy));
+            const mouseScene = mouseEventToSceneMatrix(event);
+            const matrix = mouseScene.multiply(grabCursor);
 
-            console.log(d2.transformPoint(new DOMPoint(0, 0)))
+            const a = position(mouseScene);
+            const b = position(grabCursor);
+            const c = position(matrix);
+            const d = position(drawingView.matrix);
 
-            drawingView.setMatrix(d2);
+            //console.log(`drawing: ${d.x},${d.y} -> ${c.x},${c.y}`);
+            //console.log(`${scale(grabCursor)}), mouse: ${a.x},${a.y}, grab: ${b.x},${b.y}`);
+
+            drawingView.setMatrix(sceneTransform.multiply(matrix));
         }
     });
     document.addEventListener('pointerup', (event) => {
