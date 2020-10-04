@@ -31,9 +31,6 @@ class DrawingView {
 }
 
 async function start() {
-    const dataElement = document.getElementById(dataId);
-    project = JSON.parse(dataElement.innerHTML);
-
     const sceneContainer = document.getElementById("scene-container");
     sceneContainer.innerHTML = "";
 
@@ -115,14 +112,18 @@ async function start() {
         setActiveDrawing(activeDrawing);
     });
     panel.cloneButton.addEventListener("click", () => {
-        const clone = {...activeDrawing};
+        const clone = JSON.parse(JSON.stringify(activeDrawing))
+        clone.position.x += 8;
+        clone.position.y += 8;
         clone.name += " copy";
 
         project.drawings.push(clone);
         const rendering = copyRendering2D(getActiveRendering());
-        addDrawingFromImage(clone, rendering.canvas);
+        
+        addDrawingFromRendering(clone, rendering);
 
         setActiveDrawing(clone);
+        refreshScene();
         refreshDrawingSelect();
     });
     panel.exportButton.addEventListener("click", () => {
@@ -147,6 +148,11 @@ async function start() {
         refreshDrawingSelect();
     });
 
+    await setProjectFromJson(document.getElementById(dataId).innerHTML);
+}
+
+async function setProjectFromJson(json) {
+    project = JSON.parse(json);
     await reloadAllDrawings();
 }
 
@@ -156,12 +162,10 @@ const drawingToRendering2d = new Map();
 const drawingToDrawingView = new Map();
 
 function refreshScene() {
-    let offset = 8;
     project.drawings.forEach((drawing) => {
         const view = drawingToDrawingView.get(drawing);
-        drawing.position = { x: offset, y: 8 };
-        offset += view.canvas.width + 8;
-        
+        drawing.position = drawing.position || { x: 0, y: 0 };
+
         const transform = (new DOMMatrix()).translate(drawing.position.x, drawing.position.y);
         const matrix = sceneTransform.multiply(transform);
 
@@ -170,12 +174,10 @@ function refreshScene() {
 }
 
 /**
- * @param {HTMLImageElement} image 
+ * @param {CanvasRenderingContext2D} rendering 
  */
-function addDrawingFromImage(drawing, image) {
+function addDrawingFromRendering(drawing, rendering) {
     const drawingContainer = document.getElementById("scene-container");
-    
-    const rendering = imageToRendering2D(image);
     const view = new DrawingView(drawing, rendering.canvas, rendering);
 
     drawingContainer.appendChild(rendering.canvas);
@@ -192,10 +194,10 @@ async function reloadAllDrawings() {
     drawingToRendering2d.clear();
     drawingToDrawingView.clear();
 
-
     async function reload(drawing) {
         const image = await loadImage(drawing.image);
-        addDrawingFromImage(drawing, image);
+        const rendering = imageToRendering2D(image);
+        addDrawingFromRendering(drawing, rendering);
     };
 
     await Promise.all(project.drawings.map(reload));
@@ -289,6 +291,10 @@ function setActiveDrawing(drawing) {
     activeDrawing = drawing;
     const rendering = drawingToRendering2d.get(drawing);
 
+    drawingToRendering2d.forEach((rendering, drawing_) => {
+        rendering.canvas.classList.toggle("active", drawing === drawing_);
+    })
+
     const panel = getDrawingSettingsPanel();
     panel.widthInput.value = rendering.canvas.width.toString();
     panel.heightInput.value = rendering.canvas.height.toString();
@@ -345,15 +351,6 @@ function makeDrawable(drawingView) {
         return [pos.x, pos.y];
     }
 
-    function position(matrix) {
-        return matrix.transformPoint(new DOMPoint(0, 0));
-    }
-
-    function scale(matrix) {
-        const t = grabCursor.transformPoint(new DOMPoint(1, 0));
-        return Math.sqrt(t.x*t.x +t.y*t.y);
-    }
-
     rendering.canvas.addEventListener('pointerdown', (event) => {
         killEvent(event);
         const [x1, y1] = eventToPixel(event);
@@ -364,10 +361,12 @@ function makeDrawable(drawingView) {
         } else {
             setActiveDrawing(drawingView.drawing);
 
-            const mouseScene = mouseEventToSceneMatrix(event);
+            // determine and save the relationship between mouse and drawing
+            // D1 = S^ . W1 (drawing relative to scene)
             const drawingScene = sceneTransform.inverse().multiply(drawingView.matrix);
-            const matrix = drawingScene.inverse().multiply(mouseScene);
-            grabCursor = matrix.inverse();
+            // G = M1^ . D1 (drawing relative to mouse)
+            const mouseScene = mouseEventToSceneMatrix(event);
+            grabCursor = mouseScene.invertSelf().multiplySelf(drawingScene);
         }
     });
     document.addEventListener('pointermove', (event) => {
@@ -382,18 +381,15 @@ function makeDrawable(drawingView) {
             lineplot(x0, y0, x1, y1, draw);
             prevCursor = [x1, y1];
         } else if (grabCursor) {
-            const mouseScene = mouseEventToSceneMatrix(event);
-            const matrix = mouseScene.multiply(grabCursor);
+            // preserve the relationship between mouse and drawing
+            // D2 = M2 . G (drawing relative to scene)
+            const drawingScene = mouseEventToSceneMatrix(event).multiplySelf(grabCursor);
+            // W2 = S . D2 (drawing relative to container)
+            drawingView.setMatrix(sceneTransform.multiply(drawingScene));
 
-            const a = position(mouseScene);
-            const b = position(grabCursor);
-            const c = position(matrix);
-            const d = position(drawingView.matrix);
-
-            //console.log(`drawing: ${d.x},${d.y} -> ${c.x},${c.y}`);
-            //console.log(`${scale(grabCursor)}), mouse: ${a.x},${a.y}, grab: ${b.x},${b.y}`);
-
-            drawingView.setMatrix(sceneTransform.multiply(matrix));
+            const position = drawingScene.transformPoint();
+            drawingView.drawing.position.x = position.x;
+            drawingView.drawing.position.y = position.y;
         }
     });
     document.addEventListener('pointerup', (event) => {
@@ -411,7 +407,7 @@ function exportEditor() {
         drawing.image = drawingToRendering2d.get(drawing).canvas.toDataURL("image/png");
     });
 
-    const dataElement = document.getElementById("#" + dataId);
+    const dataElement = document.getElementById(dataId);
     dataElement.innerHTML = JSON.stringify(project);
 
     const clone = /** @type {HTMLElement} */ (document.documentElement.cloneNode(true));

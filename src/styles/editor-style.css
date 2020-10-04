@@ -33,8 +33,17 @@ h2 {
 }
 
 #scene-container > canvas {
-    outline: 1px solid white;
+    outline: 1px solid rgb(255 255 255 / 50%);
     position: absolute; transform-origin: 0 0;
+}
+
+#scene-container > canvas.active {
+    outline: 3px solid rgb(255 255 255 / 50%);
+}
+
+#scene-container > canvas:hover {
+    outline-color: darkred;
+    cursor: grab;
 }
 
 #tools-container {
