@@ -46,6 +46,10 @@ h2 {
     cursor: grab;
 }
 
+#scene-container.draw > canvas:hover {
+    cursor: crosshair;
+}
+
 #tools-container {
     width: 320px;
     display: flex; flex-direction: column;
@@ -106,4 +110,5 @@ textarea.error {
     background: none;
     position: absolute;
     pointer-events: none;
+    outline: none;
 }

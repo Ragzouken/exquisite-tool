@@ -88,12 +88,14 @@ async function start() {
         mode = "select";
         drawingPanel.hidden = false;
         brushPanel.hidden = true;
+        sceneContainer.classList.toggle("draw", false);
     });
 
     document.getElementById("draw-mode-button").addEventListener("click", () => {
         mode = "draw";
         drawingPanel.hidden = true;
         brushPanel.hidden = false;
+        sceneContainer.classList.toggle("draw", true);
     })
 
     const panel = getDrawingSettingsPanel();
@@ -201,6 +203,7 @@ async function reloadAllDrawings() {
     };
 
     await Promise.all(project.drawings.map(reload));
+    drawingContainer.appendChild(cursor.canvas);
 
     const first = Array.from(drawingToRendering2d.keys())[0];
     setActiveDrawing(first);
@@ -348,7 +351,7 @@ function makeDrawable(drawingView) {
         const [sx, sy] = [event.clientX - rect.x, event.clientY - rect.y];
         const pos = drawingView.matrixInv.transformPoint(new DOMPointReadOnly(sx, sy));
 
-        return [pos.x, pos.y];
+        return [pos.x|0, pos.y|0];
     }
 
     rendering.canvas.addEventListener('pointerdown', (event) => {
@@ -372,11 +375,18 @@ function makeDrawable(drawingView) {
     document.addEventListener('pointermove', (event) => {
         const [x1, y1] = eventToPixel(event);
 
+        cursor.canvas.hidden = mode !== "draw";
+        
         if (mode === "draw") {
-            fillRendering2D(cursor);
             const inside = x1 >= 0 && y1 >= 0 && x1 < rendering.canvas.width && y1 < rendering.canvas.height;
-            if (prevCursor || inside) draw(x1, y1, cursor);
-            if (prevCursor === undefined) return;      
+            if (prevCursor || inside) {
+                fillRendering2D(cursor);
+                resizeRendering2D(cursor, drawingView.canvas.width, drawingView.canvas.height);
+                cursor.canvas.style.setProperty("transform", drawingView.matrix.toString());
+                draw(x1, y1, cursor);
+            }
+            if (prevCursor === undefined) return;
+            
             const [x0, y0] = prevCursor;  
             lineplot(x0, y0, x1, y1, draw);
             prevCursor = [x1, y1];
