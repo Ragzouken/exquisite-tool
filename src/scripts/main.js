@@ -346,7 +346,7 @@ function makeDrawable(drawingView) {
     /**
      * @param {MouseEvent} event 
      */
-    function eventToPixel(event) {
+    function mouseToDrawingPixel(event) {
         const rect = drawingContainer.getBoundingClientRect();
         const [sx, sy] = [event.clientX - rect.x, event.clientY - rect.y];
         const pos = drawingView.matrixInv.transformPoint(new DOMPointReadOnly(sx, sy));
@@ -356,9 +356,9 @@ function makeDrawable(drawingView) {
 
     rendering.canvas.addEventListener('pointerdown', (event) => {
         killEvent(event);
-        const [x1, y1] = eventToPixel(event);
 
         if (mode === "draw") {
+            const [x1, y1] = mouseToDrawingPixel(event);
             draw(x1, y1);
             prevCursor = [x1, y1];
         } else {
@@ -373,11 +373,10 @@ function makeDrawable(drawingView) {
         }
     });
     document.addEventListener('pointermove', (event) => {
-        const [x1, y1] = eventToPixel(event);
-
         cursor.canvas.hidden = mode !== "draw";
         
-        if (mode === "draw") {
+        if (mode === "draw") {  
+            const [x1, y1] = mouseToDrawingPixel(event);
             const inside = x1 >= 0 && y1 >= 0 && x1 < rendering.canvas.width && y1 < rendering.canvas.height;
             if (prevCursor || inside) {
                 fillRendering2D(cursor);
