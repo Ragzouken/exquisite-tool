@@ -30,11 +30,17 @@ h2 {
     position: relative; overflow: hidden; /* clip things */
     flex: 1;
     background: var(--trans-gradient);
+    cursor: grab;
+}
+
+#scene-container.grabbing {
+    cursor: grabbing;
 }
 
 #scene-container > canvas {
     outline: 1px solid rgb(255 255 255 / 50%);
     position: absolute; transform-origin: 0 0;
+    cursor: grab;
 }
 
 #scene-container > canvas.active {
@@ -43,11 +49,14 @@ h2 {
 
 #scene-container > canvas:hover {
     outline-color: darkred;
-    cursor: grab;
 }
 
-#scene-container.draw > canvas:hover {
+#scene-container.draw > canvas {
     cursor: crosshair;
+}
+
+#scene-container > canvas.grabbing {
+    cursor: grabbing;
 }
 
 #tools-container {

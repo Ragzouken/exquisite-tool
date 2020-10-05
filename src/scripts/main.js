@@ -150,6 +150,7 @@ async function start() {
         refreshDrawingSelect();
     });
 
+    makeScenePannable();
     await setProjectFromJson(document.getElementById(dataId).innerHTML);
 }
 
@@ -315,8 +316,46 @@ const eraseToggle = document.getElementById("erase-toggle");
  * @property {HTMLElement} dataElement
  */
 
-const sceneTransform = new DOMMatrix();
+let sceneTransform = new DOMMatrix();
 sceneTransform.scaleSelf(4, 4);
+
+function makeScenePannable() {
+    const sceneContainer = document.getElementById("scene-container");
+
+    let grab = undefined;
+
+    function mouseEventToContainerMatrix(event) {
+        const rect = sceneContainer.getBoundingClientRect();
+        const [sx, sy] = [event.clientX - rect.x, event.clientY - rect.y];
+        const matrix = (new DOMMatrixReadOnly()).translate(sx, sy);
+        return matrix;
+    }
+
+    sceneContainer.addEventListener("pointerdown", (event) => {
+        killEvent(event);
+
+        // determine and save the relationship between mouse and scene
+        // G = M1^ . S (scene relative to mouse)
+        const mouse = mouseEventToContainerMatrix(event);
+        grab = mouse.invertSelf().multiplySelf(sceneTransform);
+        sceneContainer.classList.toggle("grabbing", true);
+    });
+
+    document.addEventListener("pointermove", (event) => {
+        if (!grab) return;
+
+        // preserve the relationship between mouse and scene
+        // D2 = M2 . G (drawing relative to scene)
+        const mouse = mouseEventToContainerMatrix(event);
+        sceneTransform = mouse.multiply(grab);
+        refreshScene();
+    });
+
+    document.addEventListener("pointerup", (event) => {
+        grab = undefined;
+        sceneContainer.classList.toggle("grabbing", false);
+    });
+}
 
 /**
  * @param {DrawingView} drawingView 
@@ -370,6 +409,7 @@ function makeDrawable(drawingView) {
             // G = M1^ . D1 (drawing relative to mouse)
             const mouseScene = mouseEventToSceneMatrix(event);
             grabCursor = mouseScene.invertSelf().multiplySelf(drawingScene);
+            drawingView.canvas.classList.toggle("grabbing", true);
         }
     });
     document.addEventListener('pointermove', (event) => {
@@ -404,6 +444,7 @@ function makeDrawable(drawingView) {
     document.addEventListener('pointerup', (event) => {
         prevCursor = undefined;
         grabCursor = undefined;
+        drawingView.canvas.classList.toggle("grabbing", false);
     });
 }
 
