@@ -355,6 +355,21 @@ function makeScenePannable() {
         grab = undefined;
         sceneContainer.classList.toggle("grabbing", false);
     });
+
+    function getScale(matrix) {
+        return matrix.transformPoint(new DOMPoint(1, 0)).x;
+    }
+
+    sceneContainer.addEventListener('wheel', (event) => {
+        const mouse = mouseEventToContainerMatrix(event);
+        const origin = (sceneTransform.inverse().multiply(mouse)).transformPoint();
+        const deltaScale = Math.pow(2, event.deltaY * 0.01);
+        sceneTransform.scaleSelf(
+            deltaScale, deltaScale, deltaScale,
+            origin.x, origin.y, origin.z,
+        );
+        refreshScene();
+    });
 }
 
 /**
